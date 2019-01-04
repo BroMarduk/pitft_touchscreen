@@ -24,45 +24,51 @@ class pitft_touchscreen(threading.Thread):
         self.event['y'] = None
         self.event['touch'] = None
         self.events = queue.Queue()
+        self.shutdown = threading.Event()
 
     def run(self):
-        self.stopping = False
-        for event in self.device.read_loop():
-            if self.stopping:
-                break
-            if event.type == evdev.ecodes.EV_ABS:
-                if event.code == evdev.ecodes.ABS_X:
-                    self.event['x'] = event.value
-                elif event.code == evdev.ecodes.ABS_Y:
-                    self.event['y'] = event.value
-                elif event.code == evdev.ecodes.ABS_MT_TRACKING_ID:
-                    self.event['id'] = event.value
-                    if event.value == -1:
-                        self.event['x'] = None
-                        self.event['y'] = None
+        while not self.shutdown.is_set()
+            for event in self.wait_event():
+                if event.type == evdev.ecodes.EV_ABS:
+                    if event.code == evdev.ecodes.ABS_X:
+                        self.event['x'] = event.value
+                    elif event.code == evdev.ecodes.ABS_Y:
+                        self.event['y'] = event.value
+                    elif event.code == evdev.ecodes.ABS_MT_TRACKING_ID:
+                        self.event['id'] = event.value
+                        if event.value == -1:
+                            self.event['x'] = None
+                            self.event['y'] = None
+                            self.event['touch'] = None
+                    elif event.code == evdev.ecodes.ABS_MT_POSITION_X:
+                        pass
+                    elif event.code == evdev.ecodes.ABS_MT_POSITION_Y:
+                        pass
+                elif event.type == evdev.ecodes.EV_KEY:
+                    self.event['touch'] = event.value
+                elif event.type == evdev.ecodes.SYN_REPORT:
+                    self.event['time'] = event.timestamp()
+                    self.events.put(self.event)
+                    e = self.event
+                    self.event = {}
+                    self.event['x'] = e['x']
+                    self.event['y'] = e['y']
+                    try:
+                        self.event['id'] = e['id']
+                    except KeyError:
+                        self.event['id'] = None
+                    try:
+                        self.event['touch'] = e['touch']
+                    except KeyError:
                         self.event['touch'] = None
-                elif event.code == evdev.ecodes.ABS_MT_POSITION_X:
-                    pass
-                elif event.code == evdev.ecodes.ABS_MT_POSITION_Y:
-                    pass
-            elif event.type == evdev.ecodes.EV_KEY:
-                self.event['touch'] = event.value
-            elif event.type == evdev.ecodes.SYN_REPORT:
-                self.event['time'] = event.timestamp()
-                self.events.put(self.event)
-                e = self.event
-                self.event = {}
-                self.event['x'] = e['x']
-                self.event['y'] = e['y']
-                try:
-                    self.event['id'] = e['id']
-                except KeyError:
-                    self.event['id'] = None
-                try:
-                    self.event['touch'] = e['touch']
-                except KeyError:
-                    self.event['touch'] = None
 
+    def wait_event(self):
+        while True:
+            readable, writeable, exceptional = select.select([self.device.fd], [], [])
+            if readable:
+                for event in self.device.read():
+                    yield event
+                    
     def get_event(self):
         if not self.events.empty():
             event = self.events.get()
@@ -73,11 +79,5 @@ class pitft_touchscreen(threading.Thread):
     def queue_empty(self):
         return self.events.empty()
 
-    def stop(self):
-        self.stopping = True
-        # Inject event to force immediate breaking "for" loop in run procedure.
-        self.device.write(evdev.ecodes.EV_ABS, evdev.ecodes.ABS_X, 1)
-        self.device.write(evdev.ecodes.SYN_REPORT, 0, 0)
-
     def __del__(self):
-        self.stop()
+        self.shutdown_flag.set()
