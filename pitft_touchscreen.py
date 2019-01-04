@@ -28,42 +28,47 @@ class pitft_touchscreen(threading.Thread):
 
     def run(self):
         while not self.shutdown.is_set()
-            readable, writeable, exceptional  = select.select([self.device.fd], [], [], 0.1)
+            for event in self.wait_event():
+                if event.type == evdev.ecodes.EV_ABS:
+                    if event.code == evdev.ecodes.ABS_X:
+                        self.event['x'] = event.value
+                    elif event.code == evdev.ecodes.ABS_Y:
+                        self.event['y'] = event.value
+                    elif event.code == evdev.ecodes.ABS_MT_TRACKING_ID:
+                        self.event['id'] = event.value
+                        if event.value == -1:
+                            self.event['x'] = None
+                            self.event['y'] = None
+                            self.event['touch'] = None
+                    elif event.code == evdev.ecodes.ABS_MT_POSITION_X:
+                        pass
+                    elif event.code == evdev.ecodes.ABS_MT_POSITION_Y:
+                        pass
+                elif event.type == evdev.ecodes.EV_KEY:
+                    self.event['touch'] = event.value
+                elif event.type == evdev.ecodes.SYN_REPORT:
+                    self.event['time'] = event.timestamp()
+                    self.events.put(self.event)
+                    e = self.event
+                    self.event = {}
+                    self.event['x'] = e['x']
+                    self.event['y'] = e['y']
+                    try:
+                        self.event['id'] = e['id']
+                    except KeyError:
+                        self.event['id'] = None
+                    try:
+                        self.event['touch'] = e['touch']
+                    except KeyError:
+                        self.event['touch'] = None
+
+    def wait_event(self):
+        while True:
+            readable, writeable, exceptional = select.select([self.device.fd], [], [])
             if readable:
                 for event in self.device.read():
-                    if event.type == evdev.ecodes.EV_ABS:
-                        if event.code == evdev.ecodes.ABS_X:
-                            self.event['x'] = event.value
-                        elif event.code == evdev.ecodes.ABS_Y:
-                            self.event['y'] = event.value
-                        elif event.code == evdev.ecodes.ABS_MT_TRACKING_ID:
-                            self.event['id'] = event.value
-                            if event.value == -1:
-                                self.event['x'] = None
-                                self.event['y'] = None
-                                self.event['touch'] = None
-                        elif event.code == evdev.ecodes.ABS_MT_POSITION_X:
-                            pass
-                        elif event.code == evdev.ecodes.ABS_MT_POSITION_Y:
-                            pass
-                    elif event.type == evdev.ecodes.EV_KEY:
-                        self.event['touch'] = event.value
-                    elif event.type == evdev.ecodes.SYN_REPORT:
-                        self.event['time'] = event.timestamp()
-                        self.events.put(self.event)
-                        e = self.event
-                        self.event = {}
-                        self.event['x'] = e['x']
-                        self.event['y'] = e['y']
-                        try:
-                            self.event['id'] = e['id']
-                        except KeyError:
-                            self.event['id'] = None
-                        try:
-                            self.event['touch'] = e['touch']
-                        except KeyError:
-                            self.event['touch'] = None
-
+                    yield event
+                    
     def get_event(self):
         if not self.events.empty():
             event = self.events.get()
