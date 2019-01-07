@@ -2,8 +2,13 @@
 #  piTFT touchscreen handling using evdev
 
 import evdev
-import queue
 import threading
+try:
+    # python 3.5+
+    import queue
+except ImportError:
+    # python 2.7
+    import Queue as queue
 
 
 # Class for handling events from piTFT
