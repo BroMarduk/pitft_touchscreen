@@ -13,9 +13,10 @@ except ImportError:
 
 # Class for handling events from piTFT
 class pitft_touchscreen(threading.Thread):
-    def __init__(self, device_path="/dev/input/touchscreen"):
+    def __init__(self, device_path="/dev/input/touchscreen", grab=False):
         super(pitft_touchscreen, self).__init__()
         self.device_path = device_path
+        self.grab = grab
         self.events = queue.Queue()
         self.shutdown = threading.Event()
 
@@ -33,6 +34,8 @@ class pitft_touchscreen(threading.Thread):
         # exception.  This will handle it and close thread.
         try:
             device = evdev.InputDevice(self.device_path)
+            if self.grab:
+                device.grab()
         except Exception as ex:
             message = "Unable to load device {0} due to a {1} exception with" \
                       " message: {2}.".format(self.device_path,
@@ -43,7 +46,7 @@ class pitft_touchscreen(threading.Thread):
                 self.shutdown.set()
         # Loop for getting evdev events
         event = {'time': None, 'id': None, 'x': None, 'y': None, 'touch': None}
-        while True:
+        while not self.shutdown.is_set():
             for input_event in device.read_loop():
                 if input_event.type == evdev.ecodes.EV_ABS:
                     if input_event.code == evdev.ecodes.ABS_X:
@@ -75,6 +78,8 @@ class pitft_touchscreen(threading.Thread):
                         event['touch'] = e['touch']
                     except KeyError:
                         event['touch'] = None
+        if self.grab:
+            device.ungrab()
 
     def get_event(self):
         if not self.events.empty():
