@@ -2,7 +2,7 @@
 
 ## Overview
 
-This fork of the PrzemoF/pitft_touchscreen project is designed to provide support for capacitive Adafruit PiTFT screens in the latest version of Stretch, where the former Adafruit capacitive drivers have been removed.   In addition, support for resistive Adafruit PiTFT touchscreens
+This fork of the PrzemoF/pitft_touchscreen project is designed to provide support for capacitive Adafruit PiTFT screens in the latest version of Stretch, where the former Adafruit capacitive drivers have been removed.   In addition, support for resistive Adafruit PiTFT touchscreens has also been added and undergoing testing to see if resistive support can be added without the need to revert libsdl1.2debian package to an older version.
 
 ## Features
 
@@ -16,7 +16,9 @@ This fork of the PrzemoF/pitft_touchscreen project is designed to provide suppor
 
 ## Notes
 
-The EVDEV library is stateful, so messages only include changes from previous state.  This means that at times only a ABS_X or ABS_Y (or sometimes neither) event will be queued on a move or a touch.   When only one is present, it means the previous value did not change.  If the event occurs at the exact same coordinate, neither will be present.   The application using the queue will need to keep this state in order to make sure messages occur at the correct coordinates.
+The EVDEV library is stateful, so messages only include changes from previous state.  This means that at times only a ABS_X or ABS_Y (or sometimes neither) event will be queued on a move or a touch.   When only one is present, it means the previous value did not change.  If the event occurs at the exact same coordinate, neither will be present.   The application or libraries using the queue will need to keep this state in order to make sure messages occur at the correct coordinates as the ABS_X and ABS_Y messages may not occur if the previous positions did not change.   
+
+SYN_DROPPED messages inform the driver to ignore messages that EVDEV determines to be invalid.  This is implemented as best as I can tell from the EVDEV documentation.   All events are discarded property and the 
 
 ## Usage
 ```
