@@ -46,6 +46,8 @@ class pitft_touchscreen(threading.Thread):
                 self.shutdown.set()
         # Loop for getting evdev events
         event = {'time': None, 'id': None, 'x': None, 'y': None, 'touch': None}
+        last_success_pos = {'x': None, 'y': None}
+        dropping = False
         while not self.shutdown.is_set():
             for input_event in device.read_loop():
                 if input_event.type == evdev.ecodes.EV_ABS:
@@ -66,18 +68,27 @@ class pitft_touchscreen(threading.Thread):
                 elif input_event.type == evdev.ecodes.EV_KEY:
                     event['touch'] = input_event.value
                 elif input_event.type == evdev.ecodes.SYN_REPORT:
-                    event['time'] = input_event.timestamp()
-                    self.events.put(event)
-                    e = event
-                    event = {'x': e['x'], 'y': e['y']}
-                    try:
-                        event['id'] = e['id']
-                    except KeyError:
-                        event['id'] = None
-                    try:
-                        event['touch'] = e['touch']
-                    except KeyError:
+                    if dropping:
+                        event['x'] = last_success_pos['x']
+                        event['y'] = last_success_pos['y']
                         event['touch'] = None
+                        dropping = False
+                    else:
+                        event['time'] = input_event.timestamp()
+                        self.events.put(event)
+                        e = event
+                        event = {'x': e['x'], 'y': e['y']}
+                        last_success_pos = {'x': e['x'], 'y': e['y']}
+                        try:
+                            event['id'] = e['id']
+                        except KeyError:
+                            event['id'] = None
+                        try:
+                            event['touch'] = e['touch']
+                        except KeyError:
+                            event['touch'] = None
+                elif input_event.type == evdev.ecodes.SYN_DROPPED:
+                    dropping = True
         if self.grab:
             device.ungrab()
 
