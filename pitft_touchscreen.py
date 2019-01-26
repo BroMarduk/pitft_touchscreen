@@ -44,7 +44,18 @@ class pitft_touchscreen(threading.Thread):
         finally:
             if device is None:
                 self.shutdown.set()
-        # Loop for getting evdev events
+        if device.name == "EP0110M09":
+            self.capacitive_device(device)
+        elif device.name == "stmpe-ts":
+            self.resistive_device(device)
+        else:
+            if self.grab:
+                device.ungrab()
+            raise OSError("Unsupported evdev device: {}".format(device.name))
+        if self.grab:
+            device.ungrab()
+
+    def capacitive_device(self, device):
         event = {'time': None, 'id': None, 'x': None, 'y': None, 'touch': None}
         last_success_pos = {'x': None, 'y': None}
         dropping = False
@@ -89,8 +100,57 @@ class pitft_touchscreen(threading.Thread):
                             event['touch'] = None
                 elif input_event.type == evdev.ecodes.SYN_DROPPED:
                     dropping = True
-        if self.grab:
-            device.ungrab()
+
+    def resistive_device(self, device):
+        event = {'time': None, 'id': None, 'x': None, 'y': None, 'touch': None, 'pressure': None}
+        last_success_pos = {'x': None, 'y': None}
+        dropping = False
+        while not self.shutdown.is_set():
+            for input_event in device.read_loop():
+                if input_event.type == evdev.ecodes.EV_ABS:
+                    if input_event.code == evdev.ecodes.ABS_X:
+                        event['x'] = input_event.value
+                    elif input_event.code == evdev.ecodes.ABS_Y:
+                        event['y'] = input_event.value
+                    elif input_event.code == evdev.ecodes.ABS_PRESSURE:
+                        event['pressure'] = input_event.value
+                    elif input_event.code == evdev.ecodes.ABS_MT_POSITION_X:
+                        pass
+                    elif input_event.code == evdev.ecodes.ABS_MT_POSITION_Y:
+                        pass
+                elif input_event.type == evdev.ecodes.EV_KEY:
+                    event['touch'] = input_event.value
+                elif input_event.type == evdev.ecodes.SYN_REPORT:
+                    if dropping:
+                        event['x'] = last_success_pos['x']
+                        event['y'] = last_success_pos['y']
+                        dropping = False
+                    else:
+                        if input_event.sec is not None and input_event.usec is not None:
+                            event['id'] = "{0}.{1}".format(input_event.sec, input_event.usec)
+                        event['time'] = input_event.timestamp()
+                        self.events.put(event)
+                        e = event
+                        event = {'x': e['x'], 'y': e['y']}
+                        last_success_pos = {'x': e['x'], 'y': e['y']}
+                        try:
+                            event['pressure'] = e['pressure']
+                        except KeyError:
+                            event['pressure'] = None
+                        try:
+                            event['id'] = e['id']
+                        except KeyError:
+                            event['id'] = None
+                        try:
+                            event['touch'] = e['touch']
+                        except KeyError:
+                            event['touch'] = None
+                    event['x'] = None
+                    event['y'] = None
+                    event['touch'] = None
+                    event['pressure'] = None
+                elif input_event.type == evdev.ecodes.SYN_DROPPED:
+                    dropping = True
 
     def get_event(self):
         if not self.events.empty():
