@@ -1,5 +1,19 @@
-Very simple piTFT touchscreen handling class. Fully threaded ;-)
-Usage:
+**EVDEV event queue for Touchscreens on the Rasperry Pi**
+
+# Features
+
+* Threaded message queue processing
+* Support for Adafruit capacitive screen
+
+# Features over original repository
+
+* Support for SYN_DROPPED messages 
+
+# Notes
+
+The EVDEV library is stateful, so messages only include changes from previous state.  This means that at times only a ABS_X or ABS_Y (or sometimes neither) event will be queued on a move or a touch.   When only one is present, it means the previous value did not change.  If the event occurs at the exact same coordinate, neither will be present.   The application using the queue will need to keep this state in order to make sure messages occur at the correct coordinates.
+
+# Usage
 ```
 @raspberrypi:~/pitft_touchscreen $ python3 example_usage.py 
 Input device /dev/input/touchscreen found
