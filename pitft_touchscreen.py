@@ -57,7 +57,6 @@ class pitft_touchscreen(threading.Thread):
 
     def capacitive_device(self, device):
         event = {'time': None, 'id': None, 'x': None, 'y': None, 'touch': None}
-        last_success_pos = {'x': None, 'y': None}
         dropping = False
         while not self.shutdown.is_set():
             for input_event in device.read_loop():
@@ -80,8 +79,8 @@ class pitft_touchscreen(threading.Thread):
                     event['touch'] = input_event.value
                 elif input_event.type == evdev.ecodes.SYN_REPORT:
                     if dropping:
-                        event['x'] = last_success_pos['x']
-                        event['y'] = last_success_pos['y']
+                        event['x'] = None
+                        event['y'] = None
                         event['touch'] = None
                         dropping = False
                     else:
@@ -89,7 +88,6 @@ class pitft_touchscreen(threading.Thread):
                         self.events.put(event)
                         e = event
                         event = {'x': e['x'], 'y': e['y']}
-                        last_success_pos = {'x': e['x'], 'y': e['y']}
                         try:
                             event['id'] = e['id']
                         except KeyError:
@@ -103,7 +101,6 @@ class pitft_touchscreen(threading.Thread):
 
     def resistive_device(self, device):
         event = {'time': None, 'id': None, 'x': None, 'y': None, 'touch': None, 'pressure': None}
-        last_success_pos = {'x': None, 'y': None}
         dropping = False
         while not self.shutdown.is_set():
             for input_event in device.read_loop():
@@ -122,8 +119,8 @@ class pitft_touchscreen(threading.Thread):
                     event['touch'] = input_event.value
                 elif input_event.type == evdev.ecodes.SYN_REPORT:
                     if dropping:
-                        event['x'] = last_success_pos['x']
-                        event['y'] = last_success_pos['y']
+                        event['x'] = None
+                        event['y'] = None
                         dropping = False
                     else:
                         if input_event.sec is not None and input_event.usec is not None:
@@ -132,7 +129,6 @@ class pitft_touchscreen(threading.Thread):
                         self.events.put(event)
                         e = event
                         event = {'x': e['x'], 'y': e['y']}
-                        last_success_pos = {'x': e['x'], 'y': e['y']}
                         try:
                             event['pressure'] = e['pressure']
                         except KeyError:
