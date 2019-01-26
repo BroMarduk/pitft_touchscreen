@@ -1,19 +1,24 @@
-**EVDEV event queue for Touchscreens on the Rasperry Pi**
+# EVDEV event queue for Touchscreens on the Rasperry Pi
 
-# Features
+## Overview
+
+This fork of the PrzemoF/pitft_touchscreen project is designed to provide support for capacitive Adafruit PiTFT screens in the latest version of Stretch, where the former Adafruit capacitive drivers have been removed.   In addition, support for resistive Adafruit PiTFT touchscreens
+
+## Features
 
 * Threaded message queue processing
-* Support for Adafruit capacitive screen
+* Support for Adafruit capacitive PiTFTs
 
-# Features over original repository
+## Features over original repository
 
-* Support for SYN_DROPPED messages 
+* Support for SYN_DROPPED messages
+* Support for Adafruit resistive PiTFTs (3.5 support working, 2.8 being tested)
 
-# Notes
+## Notes
 
 The EVDEV library is stateful, so messages only include changes from previous state.  This means that at times only a ABS_X or ABS_Y (or sometimes neither) event will be queued on a move or a touch.   When only one is present, it means the previous value did not change.  If the event occurs at the exact same coordinate, neither will be present.   The application using the queue will need to keep this state in order to make sure messages occur at the correct coordinates.
 
-# Usage
+## Usage
 ```
 @raspberrypi:~/pitft_touchscreen $ python3 example_usage.py 
 Input device /dev/input/touchscreen found
@@ -49,3 +54,10 @@ Event received: {'touch': 1, 'id': 68, 'y': 183, 'time': 1533721690.682163, 'x':
 Event received: {'touch': 0, 'id': -1, 'y': 107, 'time': 1533721690.791378, 'x': 107}
 Do whaterer you want to do while waiting for touchscreen events
 pi@raspberrypi:~/pitft_touchscreen $
+```
+# Future 
+
+* Verify support on all Adafruit Touchscreens
+* Explore support for Pimoroni HyperPixel
+* Determine if works on early Stretch releases 
+* Determine if works on latest Jessie/Wheezy releases
