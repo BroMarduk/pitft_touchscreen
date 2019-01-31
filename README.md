@@ -1,8 +1,12 @@
-# EVDEV event queue for Touchscreens on the Rasperry Pi
+# pitft_touchscreen
+EVDEV event queue for Touchscreens on the Rasperry Pi
+
+## Dependencies
+```pip3 install evdev```
 
 ## Overview
 
-This fork of the PrzemoF/pitft_touchscreen project is designed to provide support for capacitive Adafruit PiTFT screens in the latest version of Stretch, where the former Adafruit capacitive drivers have been removed.   In addition, support for resistive Adafruit PiTFT touchscreens has also been added and undergoing testing to see if resistive support can be added without the need to revert libsdl1.2debian package to an older version.
+This fork of the PrzemoF/pitft_touchscreen project is designed to provide support for capacitive Adafruit PiTFT screens in the latest version of Stretch, where the former Adafruit capacitive drivers have been removed.   In addition, support for resistive Adafruit PiTFT touchscreens has also been added.  This allows for pygame usage without the need to revert libsdl1.2debian package to an older version with both resistive and capacitive displays.
 
 ## Features
 
@@ -11,14 +15,14 @@ This fork of the PrzemoF/pitft_touchscreen project is designed to provide suppor
 
 ## Features over original repository
 
-* Support for SYN_DROPPED messages
+* Support for SYN_DROPPED messages (pending PR outstanding)
 * Support for Adafruit resistive PiTFTs (3.5 support working, 2.8 being tested)
 
 ## Notes
 
 The EVDEV library is stateful, so messages only include changes from previous state.  This means that at times only a ABS_X or ABS_Y (or sometimes neither) event will be queued on a move or a touch.   When only one is present, it means the previous value did not change.  If the event occurs at the exact same coordinate, neither will be present.   The application or libraries using the queue will need to keep this state in order to make sure messages occur at the correct coordinates as the ABS_X and ABS_Y messages may not occur if the previous positions did not change.   
 
-SYN_DROPPED messages inform the driver to ignore messages that EVDEV determines to be invalid.  This is implemented as best as I can tell from the EVDEV documentation.   All events are discarded property and the 
+SYN_DROPPED messages inform the driver to ignore messages that EVDEV determines to be invalid.  This is implemented per the guidance at https://www.freedesktop.org/software/libevdev/doc/1.1/syn_dropped.html.
 
 ## Usage
 ```
@@ -59,7 +63,5 @@ pi@raspberrypi:~/pitft_touchscreen $
 ```
 # Future 
 
-* Verify support on all Adafruit Touchscreens
-* Explore support for Pimoroni HyperPixel
-* Determine if works on early Stretch releases 
-* Determine if works on latest Jessie/Wheezy releases
+* Allow for additions to resistive and capacitive devices through initialization.
+* Support for multi-touch touchscreens (Pimoroni HyperPixel)
