@@ -1,6 +1,21 @@
 # pitft_touchscreen
 ## Dependencies
 ```pip3 install evdev```
+
+# Features
+* Threaded evdev message queue processing
+* Support for Adafruit Capacitive PiTFT displays (Single-Touch)
+* Support for Adafruit Resistive PiTFT displays (Single-Touch)
+
+# New Changes
+* Support for SYN_DROPPED messages
+* Support for Adafruit Resistive PiTFT displays
+
+# Notes
+The EVDEV library is stateful, so messages only include changes from previous state.  This means that at times only a ABS_X or ABS_Y (or sometimes neither) event will be queued on a move or a touch.   When only one is present, it means the previous value did not change.  If the event occurs at the exact same coordinate, neither will be present.   The application using the queue will need to keep this state in order to make sure messages occur at the correct coordinates.
+
+The SYN_DROPPED support added per guidance at https://www.freedesktop.org/software/libevdev/doc/1.1/syn_dropped.html
+
 ## Usage
 ```
 @raspberrypi:~/pitft_touchscreen $ python3 example_usage.py 
